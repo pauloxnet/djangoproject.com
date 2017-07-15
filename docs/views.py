@@ -3,7 +3,7 @@ import json
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.postgres.search import SearchVector
+from django.contrib.postgres.search import SearchQuery, SearchVector
 from django.contrib.sitemaps.views import x_robots_tag
 from django.contrib.sites.models import Site
 from django.core.paginator import InvalidPage, Paginator
@@ -171,8 +171,8 @@ def search_results(request, lang, version, per_page=10, orphans=3):
             results = Document.objects.filter(
                 release=release
             ).annotate(
-                search=SearchVector('title', 'content'),
-            ).filter(search=q)
+                search=SearchVector('title', weight='A') + SearchVector('content', weight='B')
+            ).filter(search=SearchQuery(q))
 
             # should = [
             #     query.Common(_all={'query': q, 'cutoff_frequency': 0.001}),
