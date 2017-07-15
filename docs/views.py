@@ -170,25 +170,6 @@ def search_results(request, lang, version, per_page=10, orphans=3):
 
             results = Document.objects.search(q, release)
 
-            # should = [
-            #     query.Common(_all={'query': q, 'cutoff_frequency': 0.001}),
-            #     query.SimpleQueryString(fields=['title', '_all'],
-            #                             query=q,
-            #                             default_operator='and'),
-            # ]
-
-            # then apply the queries and filter out anything not matching
-            # the wanted version and language, also highlight the content
-            # and order the highlighted snippets by score so that the most
-            # fitting result is used
-            # results = (DocumentDocType.search()
-            #                           .query(query.Bool(should=should))
-            #                           .filter('term', release__lang=release.lang)
-            #                           .filter('term', release__version=release.version)
-            #                           .highlight_options(order='score')
-            #                           .highlight('content_raw')
-            #                           .extra(min_score=.01))
-
             page_number = request.GET.get('page') or 1
             paginator = Paginator(results, per_page=per_page, orphans=orphans)
 
