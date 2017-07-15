@@ -20,24 +20,22 @@ from ...models import DocumentRelease
 class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
-            '--update-index',
+            '--force',
             action='store_true',
-            dest='update_index',
+            dest='force_update',
             default=False,
-            help='Also update the elasticsearch index.',
+            help='Recreate docs even if they didn\'t change.',
         )
 
     def handle(self, **kwargs):
         self.verbosity = verbosity = kwargs['verbosity']
-        update_index = kwargs['update_index']
+        force_update = kwargs['force_update']
 
         default_builders = ['json', 'djangohtml']
         default_docs_version = DocumentRelease.objects.get(is_default=True).release.version
 
         # Keep track of which Git sources have been updated.
         release_docs_changed = {}  # e.g. {'1.8': True} if the 1.8 docs updated.
-        # Only update the index if some docs rebuild.
-        update_index_required = False
 
         # Somehow, bizarely, there's a bug in Sphinx such that if I try to
         # build 1.0 before other versions, things fail in weird ways. However,
@@ -61,11 +59,10 @@ class Command(BaseCommand):
             #
             # Make a git checkout/update into the destination directory.
             if (not self.update_git(release.scm_url, checkout_dir, changed_dir='docs/') and
-                    not release_docs_changed.get(release.version)):
+                    not release_docs_changed.get(release.version) and not force_update):
                 # No docs changes so don't rebuild.
                 continue
 
-            update_index_required = update_index
             release_docs_changed[release.version] = True
 
             source_dir = checkout_dir.joinpath('docs')
@@ -150,21 +147,12 @@ class Command(BaseCommand):
                 str(built_dir)
             ])
 
-            #
-            # Rebuild the imported document list and search index.
-            #
-            if not update_index:
-                continue
-
             if verbosity >= 2:
                 self.stdout.write("  reindexing...")
 
             json_built_dir = parent_build_dir.joinpath('_built', 'json')
             documents = gen_decoded_documents(json_built_dir)
             release.sync_to_db(documents)
-
-        if update_index_required:
-            call_command('update_index', **{'verbosity': kwargs['verbosity']})
 
     def update_git(self, url, destdir, changed_dir='.'):
         """
