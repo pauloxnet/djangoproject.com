@@ -13,11 +13,9 @@ from django.utils.translation import activate, ugettext_lazy as _
 from django.views import static
 from django.views.decorators.cache import cache_page
 from django_hosts.resolvers import reverse
-from elasticsearch_dsl import query
 
 from .forms import DocSearchForm
 from .models import Document, DocumentRelease
-from .search import DocumentDocType
 from .utils import get_doc_path_or_404, get_doc_root_or_404
 
 SIMPLE_SEARCH_OPERATORS = ['+', '|', '-', '"', '*', '(', ')', '~']
@@ -170,7 +168,6 @@ def search_results(request, lang, version, per_page=10, orphans=3):
 
             # let's just use simple queries since they allow some
             # neat syntaxes for exclusion etc. For more info see
-            # http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html
             should = [
                 query.Common(_all={'query': q, 'cutoff_frequency': 0.001}),
                 query.SimpleQueryString(fields=['title', '_all'],
