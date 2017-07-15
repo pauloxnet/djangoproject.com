@@ -321,3 +321,42 @@ class SitemapTests(TestCase):
             response.context['exception'],
             "No sitemap available for section: 'xx'"
         )
+
+
+class SearchResultsTests(TestCase):
+
+    def setUp(self):
+        # We should add some basic documents
+        release = Release.objects.create(version='2.0', major=2, micro=0, minor=0, iteration=0, status="f")
+        doc_release = DocumentRelease.objects.create(lang="en", release=release, is_default=True)
+
+        # Create two relevant documents
+        Document.objects.create(
+            release=doc_release,
+            path='tutorials/views',
+            title='Tutorial on Django views',
+            content='Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been'
+        )
+
+        Document.objects.create(
+            release=doc_release,
+            path='advanced/views',
+            title='Django views',
+            content='Lorem tutorial is simply dummy tutorial. Lorem Ipsum tutorial'
+        )
+
+        # Create a non relevant document
+        Document.objects.create(
+            release=doc_release,
+            path='advanced/form',
+            title='Django forms',
+            content='Lorem Ipsum is simply dummy text of the printing and typesetting industry.'
+        )
+
+    def testResultRank(self):
+        pass
+
+    def testHighlight(self):
+        pass
+
+
