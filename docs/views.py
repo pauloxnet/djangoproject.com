@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.sitemaps.views import x_robots_tag
 from django.contrib.sites.models import Site
-from django.core.paginator import InvalidPage
+from django.core.paginator import InvalidPage, Paginator
 from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render
 from django.template.response import TemplateResponse
@@ -17,7 +17,7 @@ from elasticsearch_dsl import query
 
 from .forms import DocSearchForm
 from .models import Document, DocumentRelease
-from .search import DocumentDocType, SearchPaginator
+from .search import DocumentDocType
 from .utils import get_doc_path_or_404, get_doc_root_or_404
 
 SIMPLE_SEARCH_OPERATORS = ['+', '|', '-', '"', '*', '(', ')', '~']
@@ -191,7 +191,7 @@ def search_results(request, lang, version, per_page=10, orphans=3):
                                       .extra(min_score=.01))
 
             page_number = request.GET.get('page') or 1
-            paginator = SearchPaginator(results, per_page=per_page, orphans=orphans)
+            paginator = Paginator(results, per_page=per_page, orphans=orphans)
 
             try:
                 page_number = int(page_number)

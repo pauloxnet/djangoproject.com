@@ -213,7 +213,7 @@ class Document(models.Model):
     )
     path = models.CharField(max_length=500)
     title = models.CharField(max_length=500)
-    content = models.TextField()
+    content = models.TextField(blank=True)
 
     @property
     def content_raw(self):
