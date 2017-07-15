@@ -11,7 +11,7 @@ from contextlib import closing
 from pathlib import Path
 
 from django.conf import settings
-from django.core.management import BaseCommand, call_command
+from django.core.management import BaseCommand
 from django.utils.translation import to_locale
 
 from ...models import DocumentRelease
