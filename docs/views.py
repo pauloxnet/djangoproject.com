@@ -159,7 +159,7 @@ def search_results(request, lang, version, per_page=10, orphans=3):
         if q:
             # catch queries that are coming from browser search bars
             exact = Document.objects.filter(release=release) \
-                                    .filter(title=q)[0]
+                                    .filter(title=q).first()
             if exact is not None:
                 return redirect(exact)
 
