@@ -180,10 +180,8 @@ def search_results(request, lang, version, per_page=10, orphans=3):
                 search=search_query
             ).annotate(
                 rank=search_rank
-            ).distinct(
-                'id', 'rank'
             ).order_by(
-                '-rank', 'id'
+                '-rank'
             )
 
             # should = [
