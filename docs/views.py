@@ -175,9 +175,9 @@ def search_results(request, lang, version, per_page=10, orphans=3):
             results = Document.objects.filter(
                 release=release
             ).annotate(
-                search=search_vector
+                search_vector=search_vector
             ).filter(
-                search=search_query
+                search_vector=search_query
             ).annotate(
                 rank=search_rank
             ).order_by(
