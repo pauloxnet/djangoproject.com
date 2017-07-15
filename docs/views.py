@@ -159,7 +159,7 @@ def search_results(request, lang, version, per_page=10, orphans=3):
         if q:
             # catch queries that are coming from browser search bars
             exact = Document.objects.filter(release=release) \
-                                    .filter(title=q)[0]
+                                    .filter(title=q).first()
             if exact is not None:
                 return redirect(exact)
 
@@ -242,8 +242,8 @@ def search_suggestions(request, lang, version, per_page=20):
         q = form.cleaned_data.get('q')
         if q:
             results = Document.objects.filter(release__lang=release.lang) \
-                                       .filter(release__version=release.version) \
-                                       .filter(title__contains=q)
+                                      .filter(release__version=release.version) \
+                                      .filter(title__search=q)
             suggestions.append(q)
             titles = []
             links = []
