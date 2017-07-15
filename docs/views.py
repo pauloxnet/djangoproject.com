@@ -3,7 +3,9 @@ import json
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.postgres.search import SearchQuery, SearchVector
+from django.contrib.postgres.search import (
+    SearchQuery, SearchRank, SearchVector
+)
 from django.contrib.sitemaps.views import x_robots_tag
 from django.contrib.sites.models import Site
 from django.core.paginator import InvalidPage, Paginator
@@ -167,12 +169,22 @@ def search_results(request, lang, version, per_page=10, orphans=3):
             # neat syntaxes for exclusion etc. For more info see
 
             # POSTGRES_MAGIC_IN_HERE
-
+            search_vector = SearchVector('title', weight='A') + SearchVector('content', weight='B')
+            search_query = SearchQuery(q)
+            search_rank = SearchRank(search_vector, search_query)
             results = Document.objects.filter(
                 release=release
             ).annotate(
-                search=SearchVector('title', weight='A') + SearchVector('content', weight='B')
-            ).filter(search=SearchQuery(q))
+                search=search_vector
+            ).filter(
+                search=search_query
+            ).annotate(
+                rank=search_rank
+            ).distinct(
+                'id', 'rank'
+            ).order_by(
+                '-rank', 'id'
+            )
 
             # should = [
             #     query.Common(_all={'query': q, 'cutoff_frequency': 0.001}),
