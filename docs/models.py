@@ -157,6 +157,7 @@ class DocumentRelease(models.Model):
                 release=self,
                 path=_clean_document_path(document['current_page_name']),
                 title=unescape_entities(strip_tags(document['title'])),
+                content=document['body'],
             )
 
 
@@ -212,6 +213,11 @@ class Document(models.Model):
     )
     path = models.CharField(max_length=500)
     title = models.CharField(max_length=500)
+    content = models.TextField()
+
+    @property
+    def content_raw(self):
+        return strip_tags(unescape_entities(self.content).replace(u'¶', ''))
 
     objects = DocumentManager()
 
