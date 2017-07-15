@@ -18,8 +18,6 @@ from .forms import DocSearchForm
 from .models import Document, DocumentRelease
 from .utils import get_doc_path_or_404, get_doc_root_or_404
 
-SIMPLE_SEARCH_OPERATORS = ['+', '|', '-', '"', '*', '(', ')', '~']
-
 
 def index(request):
     return redirect(DocumentRelease.objects.current())
@@ -160,14 +158,17 @@ def search_results(request, lang, version, per_page=10, orphans=3):
 
         if q:
             # catch queries that are coming from browser search bars
-            exact = (DocumentDocType.index_queryset()
-                                    .filter(release=release, title=q)
-                                    .first())
+            exact = Document.objects.filter(release=release) \
+                                    .filter(title=q)[0]
             if exact is not None:
                 return redirect(exact)
 
             # let's just use simple queries since they allow some
             # neat syntaxes for exclusion etc. For more info see
+
+            # POSTGRES_MAGIC_IN_HERE
+            import HttpResponseBadRequest
+            return HttpResponseBadRequest
             should = [
                 query.Common(_all={'query': q, 'cutoff_frequency': 0.001}),
                 query.SimpleQueryString(fields=['title', '_all'],
@@ -240,21 +241,13 @@ def search_suggestions(request, lang, version, per_page=20):
     if form.is_valid():
         q = form.cleaned_data.get('q')
         if q:
-            search = DocumentDocType.search()
-            search = (search.query(query.SimpleQueryString(fields=['title^10',
-                                                                   'content'],
-                                                           query=q,
-                                                           analyzer='stop',
-                                                           default_operator='and'))
-                            .filter('term', release__lang=release.lang)
-                            .filter('term', release__version=release.version)
-                            .source(includes=['title']))
-
+            results = Document.objects.filter(release__lang=release.lang) \
+                                       .filter(release__version=release.version) \
+                                       .filter(title__contains=q)
             suggestions.append(q)
             titles = []
             links = []
             content_type = ContentType.objects.get_for_model(Document)
-            results = search[0:per_page].execute()
             for result in results:
                 titles.append(result.title)
                 kwargs = {
