@@ -168,21 +168,7 @@ def search_results(request, lang, version, per_page=10, orphans=3):
             # let's just use simple queries since they allow some
             # neat syntaxes for exclusion etc. For more info see
 
-            # POSTGRES_MAGIC_IN_HERE
-            search_vector = SearchVector('title', weight='A') + SearchVector('content', weight='B')
-            search_query = SearchQuery(q)
-            search_rank = SearchRank(search_vector, search_query)
-            results = Document.objects.filter(
-                release=release
-            ).annotate(
-                search_vector=search_vector
-            ).filter(
-                search_vector=search_query
-            ).annotate(
-                rank=search_rank
-            ).order_by(
-                '-rank'
-            )
+            results = Document.objects.search(q, release)
 
             # should = [
             #     query.Common(_all={'query': q, 'cutoff_frequency': 0.001}),

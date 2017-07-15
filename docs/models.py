@@ -7,8 +7,11 @@ from pathlib import Path
 from django.conf import settings
 from django.core.cache import cache
 from django.contrib.postgres.indexes import GinIndex
-from django.contrib.postgres.search import SearchVectorField
+from django.contrib.postgres.search import (
+    SearchQuery, SearchRank, SearchVector, SearchVectorField
+)
 from django.db import models, transaction
+from django.db.models import F
 from django.utils.functional import cached_property
 from django.utils.html import strip_tags
 from django.utils.text import unescape_entities
@@ -155,12 +158,15 @@ class DocumentRelease(models.Model):
                 # We don't care about indexing documents with no body or title, or partially translated
                 continue
 
-            Document.objects.create(
+            document = Document.objects.create(
                 release=self,
                 path=_clean_document_path(document['current_page_name']),
                 title=unescape_entities(strip_tags(document['title'])),
-                content=document['body'],
+                content=document['body']
             )
+        Document.objects.update(
+            search=SearchVector('title', weight='A') + SearchVector('content', weight='B')
+        )
 
 
 def _clean_document_path(path):
@@ -202,6 +208,17 @@ class DocumentManager(models.Manager):
                         .order_by('path'))
         else:
             return self.none()
+
+    def search(self, text, release):
+        """
+        Full Text-Search module for searching given text into search fileds.
+        """
+        search_query = SearchQuery(text)
+        search_rank = SearchRank(F('search'), search_query)
+        return self.get_queryset().filter(
+            release=release,
+            search=search_query
+        ).annotate(rank=search_rank).order_by('-rank')
 
 
 class Document(models.Model):
