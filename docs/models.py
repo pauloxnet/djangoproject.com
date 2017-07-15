@@ -6,6 +6,8 @@ from pathlib import Path
 
 from django.conf import settings
 from django.core.cache import cache
+from django.contrib.postgres.indexes import GinIndex
+from django.contrib.postgres.search import SearchVectorField
 from django.db import models, transaction
 from django.utils.functional import cached_property
 from django.utils.html import strip_tags
@@ -214,6 +216,7 @@ class Document(models.Model):
     path = models.CharField(max_length=500)
     title = models.CharField(max_length=500)
     content = models.TextField(blank=True)
+    search = SearchVectorField(null=True, editable=False)
 
     @property
     def content_raw(self):
@@ -223,6 +226,9 @@ class Document(models.Model):
 
     class Meta:
         unique_together = ('release', 'path')
+        indexes = [
+            GinIndex(fields=['search'])
+        ]
 
     def __str__(self):
         return "/".join([self.release.lang, self.release.version, self.path])
