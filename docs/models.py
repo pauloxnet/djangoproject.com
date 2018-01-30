@@ -12,6 +12,7 @@ from django.contrib.postgres.search import (
 )
 from django.core.cache import cache
 from django.db import models, transaction
+from django.db.models import Prefetch
 from django.utils.functional import cached_property
 from django.utils.html import strip_tags
 from django.utils.text import unescape_entities
@@ -221,12 +222,14 @@ class DocumentManager(models.Manager):
             search_query = SearchQuery(query_text)
             search_rank = SearchRank(models.F('search'), search_query)
             similarity = TrigramSimilarity('title', query_text)
-            return self.get_queryset().select_related(
-                'release__release'
+            return self.get_queryset().prefetch_related(
+                Prefetch('release', queryset=DocumentRelease.objects.only('lang', 'release')),
+                Prefetch('release__release', queryset=Release.objects.only('version'))
             ).filter(
                 release_id=release.id,
                 search=search_query,
-            ).annotate(rank=search_rank + similarity).order_by('-rank')
+            ).annotate(rank=search_rank + similarity).order_by('-rank').only(
+                'title', 'path', 'metadata', 'release')
         else:
             return self.get_queryset().none()
 
