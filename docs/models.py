@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.postgres.fields.jsonb import JSONField
 from django.contrib.postgres.indexes import GinIndex
 from django.contrib.postgres.search import (
-    SearchQuery, SearchRank, SearchVectorField, TrigramSimilarity,
+    SearchQuery, SearchRank, SearchVectorField, TrigramDistance,
 )
 from django.core.cache import cache
 from django.db import models, transaction
@@ -221,15 +221,16 @@ class DocumentManager(models.Manager):
         if query_text:
             search_query = SearchQuery(query_text)
             search_rank = SearchRank(models.F('search'), search_query)
-            similarity = TrigramSimilarity('title', query_text)
+            trigram_distance = TrigramDistance('title', query_text)
             return self.get_queryset().prefetch_related(
                 Prefetch('release', queryset=DocumentRelease.objects.only('lang', 'release')),
                 Prefetch('release__release', queryset=Release.objects.only('version'))
             ).filter(
                 release_id=release.id,
                 search=search_query,
-            ).annotate(rank=search_rank + similarity).order_by('-rank').only(
-                'title', 'path', 'metadata', 'release')
+            ).annotate(rank=search_rank, distance=trigram_distance).order_by('distance', '-rank').only(
+                'title', 'path', 'metadata', 'release'
+            )
         else:
             return self.get_queryset().none()
 
