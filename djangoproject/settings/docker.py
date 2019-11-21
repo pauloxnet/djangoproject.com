@@ -1,5 +1,4 @@
 # Settings for www.djangoproject.com
-import json
 import os
 from pathlib import Path
 
@@ -12,16 +11,6 @@ BASE_DIR = PROJECT_PACKAGE.parent
 data_dir_key = 'DJANGOPROJECT_DATA_DIR'
 DATA_DIR = Path(os.environ[data_dir_key]) if data_dir_key in os.environ else BASE_DIR.parent
 
-try:
-    with DATA_DIR.joinpath('conf', 'secrets.json').open() as handle:
-        SECRETS = json.load(handle)
-except IOError:
-    SECRETS = {
-        'secret_key': 'a',
-        'superfeedr_creds': ['any@email.com', 'some_string'],
-    }
-
-
 # Django settings
 
 CACHE_MIDDLEWARE_SECONDS = 60 * 5  # 5 minutes
@@ -30,20 +19,12 @@ CACHE_MIDDLEWARE_KEY_PREFIX = 'django'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'djangoproject',
-        'USER': 'djangoproject',
-        'HOST': SECRETS.get('db_host', ''),
-        'PASSWORD': SECRETS.get('db_password', ''),
-        'PORT': SECRETS.get('db_port', ''),
-    },
-    'trac': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'code.djangoproject',
-        'USER': 'code.djangoproject',
-        'HOST': SECRETS.get('trac_db_host', ''),
-        'PASSWORD': SECRETS.get('trac_db_password', ''),
-        'PORT': SECRETS.get('trac_db_port', ''),
+        'ENGINE': os.environ.get('SQL_ENGINE'),
+        'NAME': os.environ.get('SQL_DATABASE'),
+        'USER': os.environ.get('SQL_USER'),
+        'PASSWORD': os.environ.get('SQL_PASSWORD'),
+        'HOST': os.environ.get('SQL_HOST'),
+        'PORT': os.environ.get('SQL_PORT'),
     }
 }
 
@@ -162,7 +143,7 @@ PASSWORD_HASHERS = [
 
 ROOT_URLCONF = 'djangoproject.urls.www'
 
-SECRET_KEY = str(SECRETS['secret_key'])
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
 SECURE_BROWSER_XSS_FILTER = True
 
@@ -178,6 +159,7 @@ SILENCED_SYSTEM_CHECKS = [
     'fields.W342',  # tracdb has ForeignKey(unique=True) in lieu of multi-col PKs
     'security.W008',  # SSL redirect is handled by nginx
     'security.W009',  # SECRET_KEY is setup through Ansible secrets
+    'captcha.recaptcha_test_key_error',
 ]
 
 SITE_ID = 1
@@ -255,17 +237,17 @@ PUSH_HUB = 'https://push.superfeedr.com/'
 PUSH_CREDENTIALS = 'aggregator.utils.push_credentials'
 
 # SUPERFEEDR_CREDS is a 2 element list in the form of [email,secretkey]
-SUPERFEEDR_CREDS = SECRETS.get('superfeedr_creds')
+SUPERFEEDR_CREDS = os.environ.get('superfeedr_creds', ["any@email.com", "some_string"])
 
 # Fastly credentials
-FASTLY_API_KEY = SECRETS.get('fastly_api_key')
-FASTLY_SERVICE_URL = SECRETS.get('fastly_service_url')
+FASTLY_API_KEY = os.environ.get('fastly_api_key', 'xyz')
+FASTLY_SERVICE_URL = os.environ.get('fastly_service_url', 'xyz')
 
 # Stripe settings
 
 # only testing keys as fallback values here please!
-STRIPE_SECRET_KEY = SECRETS.get('stripe_secret_key', 'sk_test_x6zP4wd7Z5jcvDOJbbHZlHHt')
-STRIPE_PUBLISHABLE_KEY = SECRETS.get('stripe_publishable_key', 'pk_test_TyB5jcROwK8mlCNrn3dCwW7l')
+STRIPE_SECRET_KEY = os.environ.get('stripe_secret_key', 'sk_test_x6zP4wd7Z5jcvDOJbbHZlHHt')
+STRIPE_PUBLISHABLE_KEY = os.environ.get('stripe_publishable_key', 'pk_test_TyB5jcROwK8mlCNrn3dCwW7l')
 
 # sorl-thumbnail settings
 THUMBNAIL_PRESERVE_FORMAT = True
@@ -274,3 +256,61 @@ THUMBNAIL_ALTERNATIVE_RESOLUTIONS = [2]
 # dashboard settings
 TRAC_RPC_URL = "https://code.djangoproject.com/rpc"
 TRAC_URL = "https://code.djangoproject.com/"
+
+ALLOWED_HOSTS = ['.localhost', '127.0.0.1', 'www.127.0.0.1']
+
+LOCALE_MIDDLEWARE_EXCLUDED_HOSTS = ['docs.djangoproject.localhost']
+
+DEBUG = True
+THUMBNAIL_DEBUG = DEBUG
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'trololololol',
+    },
+    'docs-pages': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'docs-pages',
+    },
+}
+
+CSRF_COOKIE_SECURE = False
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+MEDIA_ROOT = str(DATA_DIR.joinpath('media_root'))
+
+SESSION_COOKIE_SECURE = False
+
+STATIC_ROOT = str(DATA_DIR.joinpath('static_root'))
+
+# Docs settings
+DOCS_BUILD_ROOT = DATA_DIR.joinpath('djangodocs')
+
+# django-hosts settings
+
+PARENT_HOST = 'localhost:8000'
+
+# django-push settings
+
+PUSH_SSL_CALLBACK = False
+
+# Enable optional components
+
+if DEBUG:
+    try:
+        import debug_toolbar  # NOQA
+    except ImportError:
+        pass
+    else:
+        INSTALLED_APPS.append('debug_toolbar')
+        INTERNAL_IPS = ['127.0.0.1']
+        MIDDLEWARE.insert(
+            MIDDLEWARE.index('django.middleware.common.CommonMiddleware') + 1,
+            'debug_toolbar.middleware.DebugToolbarMiddleware'
+        )
+        MIDDLEWARE.insert(
+            MIDDLEWARE.index('debug_toolbar.middleware.DebugToolbarMiddleware') + 1,
+            'djangoproject.middleware.CORSMiddleware'
+        )

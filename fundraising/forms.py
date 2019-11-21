@@ -1,4 +1,6 @@
 import stripe
+from captcha.fields import ReCaptchaField
+from captcha.widgets import ReCaptchaV3
 from django import forms
 from django.conf import settings
 from django.core.mail import send_mail
@@ -32,7 +34,7 @@ class DjangoHeroForm(forms.ModelForm):
         required=False,
         widget=forms.TextInput(
             attrs={
-                'placeholder': 'Where are you located? (optional; will not be displayd)',
+                'placeholder': 'Where are you located? (optional; will not be displayed)',
             },
         )
     )
@@ -275,3 +277,7 @@ class PaymentForm(forms.Form):
             )
 
             return donation
+
+
+class ReCaptchaForm(forms.Form):
+    captcha = ReCaptchaField(widget=ReCaptchaV3)
